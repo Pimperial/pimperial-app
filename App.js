@@ -1,15 +1,21 @@
 import React from 'react';
-import { StyleSheet, StatusBar, AsyncStorage } from 'react-native';
+import { StyleSheet, StatusBar, AsyncStorage, Dimensions, Alert } from 'react-native';
 import { Font, AppLoading } from 'expo';
 import { View, Examples, Screen } from '@shoutem/ui';
 
 import Login from './src/Login'
+import Swiping from './src/Swiping'
+import Profile from './src/Profile'
+import Editor from './src/Editor'
+
+let screen = Dimensions.get('window')
 
 export default class App extends React.Component {
     state = {
         fontsAreLoaded: false,
         user: null,
-        screen: 'login'
+        shortcode: null,
+        screen: ''
     }
 
     async componentWillMount() {
@@ -36,13 +42,41 @@ export default class App extends React.Component {
                 <Login user={(u) => {
                     AsyncStorage.setItem('@Pimperial:shortcode', u.code)
                         .then(() => {
-                            this.setState({ user: u })
+                            this.setState({ user: u, shortcode: u.code, screen: 'edit-profile' })
                         })
                 }} />
             )
-            default: return (
-                <AppLoading />
+            case 'matchmaking': return (
+                <Swiping />
             )
+            case 'edit-profile': return (
+                <Editor user={this.state.user} />
+            )
+            default:
+                AsyncStorage.getItem('@Pimperial:shortcode')
+                    .then((c) => {
+                        fetch(
+                            `http://54.91.147.183:3415/who/is/${c}`,
+                            { method: 'post' }
+                        ).then((s) => s.json()).then((j) => {
+                            this.setState({ user: j, shortcode: c, screen: 'edit-profile' })
+                            Alert.alert('', `Welcome back, ${j.name}`)
+                        }).catch((e) => {
+                            if (e) {
+                                console.log(e)
+                                Alert.alert(
+                                    "It's not you, it's us.",
+                                    "We couldn't log you in, try again later!"
+                                )
+                            }
+                        })
+                    })
+                    .catch(() => {
+                        this.setState({ screen: 'login' })
+                    })
+                return (
+                    <AppLoading />
+                )
         }
     }
 
@@ -54,10 +88,10 @@ export default class App extends React.Component {
         return (
             <Screen style={{
                 backgroundColor: '#003b73',
-                alignItems: 'center'
+                alignItems: 'center',
             }}>
                 {this.getScreen()}
-                <StatusBar barStyle="default" hidden={false} />
+                <StatusBar barStyle="default" hidden={true} />
             </Screen>
         )
     }
