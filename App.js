@@ -17,7 +17,10 @@ export default class App extends React.Component {
         shortcode: null,
         screen: ''
     }
-
+    constructor(props) {
+        super(props)
+        console.info("Starting!")
+    }
     async componentWillMount() {
         await Font.loadAsync({
             'Rubik-Black': require('./node_modules/@shoutem/ui/fonts/Rubik-Black.ttf'),
@@ -55,21 +58,22 @@ export default class App extends React.Component {
             default:
                 AsyncStorage.getItem('@Pimperial:shortcode')
                     .then((c) => {
-                        fetch(
-                            `http://54.91.147.183:3415/who/is/${c}`,
-                            { method: 'post' }
-                        ).then((s) => s.json()).then((j) => {
-                            this.setState({ user: j, shortcode: c, screen: 'edit-profile' })
-                            Alert.alert('', `Welcome back, ${j.name}`)
-                        }).catch((e) => {
-                            if (e) {
-                                console.log(e)
-                                Alert.alert(
-                                    "It's not you, it's us.",
-                                    "We couldn't log you in, try again later!"
-                                )
-                            }
-                        })
+                        if (c)
+                            fetch(
+                                `http://54.91.147.183:3415/who/is/${c}`,
+                                { method: 'post' }
+                            ).then((s) => s.json()).then((j) => {
+                                this.setState({ user: j, shortcode: c, screen: 'edit-profile' })
+                            }).catch((e) => {
+                                if (e) {
+                                    console.debug(e)
+                                    Alert.alert(
+                                        "It's not you, it's us! 😞",
+                                        "We couldn't log you in, try again later!"
+                                    )
+                                }
+                            })
+                        else this.setState({ screen: 'login' })
                     })
                     .catch(() => {
                         this.setState({ screen: 'login' })
