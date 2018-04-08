@@ -50,10 +50,16 @@ export default class App extends React.Component {
                 }} />
             )
             case 'matchmaking': return (
-                <Swiping />
+                <Swiping edit={() => {
+                    this.setState({ screen: 'edit-profile' })
+                }} chat={() => {
+                    Alert.alert('chat')
+                }} />
             )
             case 'edit-profile': return (
-                <Editor user={this.state.user} />
+                <Editor user={this.state.user} swiping={() => {
+                    this.setState({ screen: 'matchmaking' })
+                }} />
             )
             default:
                 AsyncStorage.getItem('@Pimperial:shortcode')
@@ -63,7 +69,7 @@ export default class App extends React.Component {
                                 `http://54.91.147.183:3415/who/is/${c}`,
                                 { method: 'post' }
                             ).then((s) => s.json()).then((j) => {
-                                this.setState({ user: j, shortcode: c, screen: 'edit-profile' })
+                                this.setState({ user: j, shortcode: c, screen: 'matchmaking' })
                             }).catch((e) => {
                                 if (e) {
                                     console.debug(e)

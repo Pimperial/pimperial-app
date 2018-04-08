@@ -6,7 +6,7 @@ let screen = Dimensions.get('window')
 
 export default class Entry extends React.Component {
     state = {
-        bio: ''
+        bio: (this.props.user.bio || '')
     }
     getAge(email) {
         let year_started = email.split('@')[0]
@@ -27,6 +27,7 @@ export default class Entry extends React.Component {
                 width: screen.width
             }}>
                 <NavigationBar
+                    leftComponent={<Icon name="close" onPress={this.props.swiping} />}
                     centerComponent={<Title>EDIT PROFILE</Title>}
                     rightComponent={<Icon name="checkbox-on" onPress={() => {
                         fetch(
@@ -42,7 +43,10 @@ export default class Entry extends React.Component {
                                 })
                             }
                         ).then((s) => {
-                            if (s.status == 200) Alert.alert('Saved profile!', 'Your profile has been saved.')
+                            if (s.status == 200) {
+                                this.props.user.bio = this.state.bio
+                                this.props.swiping()
+                            }
                             else Alert.alert(
                                 "It's not you, it's us! 😞",
                                 "We couldn't save your profile, please try again later."
@@ -56,7 +60,6 @@ export default class Entry extends React.Component {
                                 )
                             }
                         })
-                        Alert.alert(this.state.bio)
                     }} />}
                 />
                 <View style={{
@@ -144,7 +147,7 @@ export default class Entry extends React.Component {
                             textAlignVertical: 'top',
                             marginTop: 20,
                             borderWidth: 0.2, borderColor: '#bbb'
-                        }} placeholder={"Tell us about yourself!"} value={this.props.user.bio}
+                        }} placeholder={"Tell us about yourself!"} value={this.state.bio}
                             onChangeText={(t) => {
                                 this.setState({ bio: t })
                             }} />
