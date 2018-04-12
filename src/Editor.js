@@ -1,12 +1,14 @@
 import React from 'react';
 import { Alert, Dimensions, Linking } from 'react-native'
+import { ImagePicker } from 'expo'
 import { Screen, View, TextInput, Button, Text, Image, NavigationBar, Title, Icon } from '@shoutem/ui';
 
 let screen = Dimensions.get('window')
 
 export default class Entry extends React.Component {
     state = {
-        bio: (this.props.user.bio || '')
+        bio: (this.props.user.bio || ''),
+        pics: (this.props.user.pics || [])
     }
     getAge(email) {
         let year_started = email.split('@')[0]
@@ -17,6 +19,22 @@ export default class Entry extends React.Component {
         let years = year_ting - year_started
         if (month_ting < 7) years -= 1 // 0 indexed years
         return years + 1
+    }
+    async choosePic(i) {
+        console.log('Picking pic #' + i)
+
+        let s = await ImagePicker.launchImageLibraryAsync({
+            allowsEditing: true,
+            aspect: [3, 4]
+        })
+
+        if (!s.cancelled) {
+            let tpp = this.state.pics
+            console.log(s.uri)
+            if (i < tpp.length) tpp[i] = s.uri
+            else tpp.push(s.uri)
+            this.setState({ pics: tpp })
+        }
     }
     render() {
         return (
@@ -45,6 +63,61 @@ export default class Entry extends React.Component {
                         ).then((s) => {
                             if (s.status == 200) {
                                 this.props.user.bio = this.state.bio
+                                for (var i = 0; i < this.state.pics.length; i++)
+                                    if (this.state.pics[i].substr(0, 4) != 'http') {
+                                        let p = this.state.pics[i] // nice SCOPE u got there
+                                        let ext = p.split('.').reduceRight(_ => _)
+                                        let type = 'image/jpeg'
+                                        if (ext.indexOf('png') == 0) type = 'image/png'
+                                        else if (ext.indexOf('gif') == 0) type = 'image/gif'
+                                        fetch(`http://54.91.147.183:3415/api/${this.props.user.code}/propic`,
+                                            {
+                                                method: 'post',
+                                                headers: {
+                                                    'Accept': 'application/json',
+                                                    'Content-Type': 'application/json'
+                                                },
+                                                body: JSON.stringify({
+                                                    filename: p,
+                                                    filetype: type
+                                                })
+                                            }
+                                        ).then((s) => s.text()).then((t) => {
+                                            console.log('Preparing to rendezvous with Bezos')
+                                            const xhr = new XMLHttpRequest()
+                                            xhr.open('PUT', t)
+                                            xhr.onreadystatechange = function () {
+                                                if (xhr.readyState === 4) {
+                                                    if (xhr.status === 200)
+                                                        console.log('Image successfully uploaded to S3')
+                                                    else {
+                                                        console.debug('S3 gave us a ' + xhr.status)
+                                                        Alert.alert(
+                                                            "It's not you, it's us! 😞",
+                                                            "We couldn't save your pictures, please try again later."
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                            xhr.setRequestHeader('Content-Type', type)
+                                            console.info("Launching all missiles. May his Bald Head bless us all.")
+                                            console.log(p)
+                                            xhr.send({
+                                                uri: p,
+                                                type: type,
+                                                name: this.props.user.code + '-' + p.split('/').reduceRight(_ => _)
+                                            })
+                                        }).catch((e) => {
+                                            if (e) {
+                                                console.debug(e)
+                                                Alert.alert(
+                                                    "It's not you, it's us! 😞",
+                                                    "We couldn't connect to our servers, please try again later."
+                                                )
+                                            }
+                                        })
+                                    }
+                                this.props.user.pics = this.state.pics
                                 this.props.swiping()
                             }
                             else Alert.alert(
@@ -55,8 +128,8 @@ export default class Entry extends React.Component {
                             if (e) {
                                 console.debug(e)
                                 Alert.alert(
-                                    "It's not you, it's us! 😞",
-                                    "We couldn't save your profile, please try again later."
+                                    "Something's wrong! 😞",
+                                    "We couldn't connect to our servers, please try again later."
                                 )
                             }
                         })
@@ -73,7 +146,7 @@ export default class Entry extends React.Component {
                             flexDirection: 'row',
                             alignItems: 'center'
                         }}>
-                            <View style={{
+                            <Button style={{
                                 width: screen.width / 3,
                                 height: screen.width / 3,
                                 backgroundColor: '#eee',
@@ -82,13 +155,26 @@ export default class Entry extends React.Component {
                                 marginRight: 10,
                                 marginBottom: 10,
                                 justifyContent: 'center'
+                            }} onPress={() => {
+                                this.choosePic(0)
                             }}>
-                                <Icon name='plus-button' style={{
-                                    fontSize: 96,
-                                    color: '#888a'
-                                }} />
-                            </View>
-                            <View style={{
+                                {
+                                    (0 < this.state.pics.length &&
+                                        <Image
+                                            style={{
+                                                width: screen.width / 3,
+                                                height: screen.width / 3
+                                            }}
+                                            source={{ uri: this.state.pics[0] }}
+                                        />)
+                                    ||
+                                    <Icon name='plus-button' style={{
+                                        fontSize: 96,
+                                        color: '#557'
+                                    }} />
+                                }
+                            </Button>
+                            <Button style={{
                                 width: screen.width / 3,
                                 height: screen.width / 3,
                                 backgroundColor: '#eee',
@@ -96,17 +182,30 @@ export default class Entry extends React.Component {
                                 borderColor: '#aaa',
                                 marginBottom: 10,
                                 justifyContent: 'center'
+                            }} onPress={() => {
+                                this.choosePic(1)
                             }}>
-                                <Icon name='plus-button' style={{
-                                    fontSize: 96,
-                                    color: '#888a'
-                                }} />
-                            </View>
+                                {
+                                    (1 < this.state.pics.length &&
+                                        <Image
+                                            style={{
+                                                width: screen.width / 3,
+                                                height: screen.width / 3
+                                            }}
+                                            source={{ uri: this.state.pics[1] }}
+                                        />)
+                                    ||
+                                    <Icon name='plus-button' style={{
+                                        fontSize: 96,
+                                        color: '#557'
+                                    }} />
+                                }
+                            </Button>
                         </View>
                         <View style={{
                             flexDirection: 'row'
                         }}>
-                            <View style={{
+                            <Button style={{
                                 width: screen.width / 3,
                                 height: screen.width / 3,
                                 backgroundColor: '#eee',
@@ -114,25 +213,51 @@ export default class Entry extends React.Component {
                                 borderColor: '#aaa',
                                 marginRight: 10,
                                 justifyContent: 'center'
+                            }} onPress={() => {
+                                this.choosePic(2)
                             }}>
-                                <Icon name='plus-button' style={{
-                                    fontSize: 96,
-                                    color: '#888a'
-                                }} />
-                            </View>
-                            <View style={{
+                                {
+                                    (2 < this.state.pics.length &&
+                                        <Image
+                                            style={{
+                                                width: screen.width / 3,
+                                                height: screen.width / 3
+                                            }}
+                                            source={{ uri: this.state.pics[2] }}
+                                        />)
+                                    ||
+                                    <Icon name='plus-button' style={{
+                                        fontSize: 96,
+                                        color: '#557'
+                                    }} />
+                                }
+                            </Button>
+                            <Button style={{
                                 width: screen.width / 3,
                                 height: screen.width / 3,
                                 backgroundColor: '#eee',
                                 borderWidth: 0.2,
                                 borderColor: '#aaa',
                                 justifyContent: 'center'
+                            }} onPress={() => {
+                                this.choosePic(3)
                             }}>
-                                <Icon name='plus-button' style={{
-                                    fontSize: 96,
-                                    color: '#888a'
-                                }} />
-                            </View>
+                                {
+                                    (3 < this.state.pics.length &&
+                                        <Image
+                                            style={{
+                                                width: screen.width / 3,
+                                                height: screen.width / 3
+                                            }}
+                                            source={{ uri: this.state.pics[3] }}
+                                        />)
+                                    ||
+                                    <Icon name='plus-button' style={{
+                                        fontSize: 96,
+                                        color: '#557'
+                                    }} />
+                                }
+                            </Button>
                         </View>
                     </View>
                     <View style={{

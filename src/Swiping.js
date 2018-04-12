@@ -16,7 +16,7 @@ export default class Swiping extends React.Component {
             }}>
                 <NavigationBar
                     leftComponent={<Icon name="user-profile" onPress={this.props.edit} />}
-                    centerComponent={<Title>EDIT PROFILE</Title>}
+                    centerComponent={<Title>Filters</Title>}
                     rightComponent={<Icon name="comment" onPress={this.props.chat} />}
                 />
                 <Text>Swiping</Text>
