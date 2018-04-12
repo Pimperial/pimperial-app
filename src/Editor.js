@@ -36,6 +36,94 @@ export default class Entry extends React.Component {
             this.setState({ pics: tpp })
         }
     }
+    uploadPic(i, cb) {
+        if (this.state.pics[i].substr(0, 4) != 'http') {
+            let ps = this.state.pics
+            let p = ps[i]
+            let ext = p.split('.').reduceRight(_ => _)
+            let type = 'image/jpeg'
+            if (ext.indexOf('png') == 0) type = 'image/png'
+            else if (ext.indexOf('gif') == 0) type = 'image/gif'
+            fetch(`http://54.91.147.183:3415/api/${this.props.user.code}/propic`,
+                {
+                    method: 'post',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        filename: p,
+                        filetype: type
+                    })
+                }
+            ).then((s) => s.json()).then((d) => {
+                let t = d.signed
+                let f = d.final
+                console.log('Preparing to rendezvous with Bezos')
+                const xhr = new XMLHttpRequest()
+                xhr.open('PUT', t)
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState === 4) {
+                        if (xhr.status === 200) {
+                            console.log("Bald eagle has landed!")
+                            ps[i] = f
+                            cb(ps)
+                        }
+                        else {
+                            console.debug('S3 gave us a ' + xhr.status)
+                            Alert.alert(
+                                "It's not you, it's us! 😞",
+                                "We couldn't save your pictures, please try again later."
+                            )
+                        }
+                    }
+                }
+                xhr.setRequestHeader('Content-Type', type)
+                console.info("Launching all missiles. May his Bald Head bless us all.")
+                console.log(p)
+                xhr.send({
+                    uri: p,
+                    type: type,
+                    name: this.props.user.code + '-' + p.split('/').reduceRight(_ => _)
+                })
+            }).catch((e) => {
+                if (e) {
+                    console.debug(e)
+                    Alert.alert(
+                        "It's not you, it's us! 😞",
+                        "We couldn't connect to our servers, please try again later."
+                    )
+                }
+            })
+        }
+        else cb(this.state.pics)
+    }
+    fin(p) {
+        fetch(
+            `http://54.91.147.183:3415/api/${this.props.user.code}/pics`,
+            {
+                method: 'post',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    pics: p
+                })
+            }
+        ).then((s) => {
+            if (s.status == 200) this.props.swiping()
+            else {
+                Alert.alert(
+                    "It's not you, it's us! 😞",
+                    "We couldn't connect to our servers. Your profile may not have saved correctly."
+                )
+                this.props.swiping()
+            }
+        }).catch((e) => {
+            console.debug('Ruh roh!', 'The connection dropped like a mic 😞 Please try again later.')
+        })
+    }
     render() {
         return (
             <View style={{
@@ -63,62 +151,25 @@ export default class Entry extends React.Component {
                         ).then((s) => {
                             if (s.status == 200) {
                                 this.props.user.bio = this.state.bio
-                                for (var i = 0; i < this.state.pics.length; i++)
-                                    if (this.state.pics[i].substr(0, 4) != 'http') {
-                                        let p = this.state.pics[i] // nice SCOPE u got there
-                                        let ext = p.split('.').reduceRight(_ => _)
-                                        let type = 'image/jpeg'
-                                        if (ext.indexOf('png') == 0) type = 'image/png'
-                                        else if (ext.indexOf('gif') == 0) type = 'image/gif'
-                                        fetch(`http://54.91.147.183:3415/api/${this.props.user.code}/propic`,
-                                            {
-                                                method: 'post',
-                                                headers: {
-                                                    'Accept': 'application/json',
-                                                    'Content-Type': 'application/json'
-                                                },
-                                                body: JSON.stringify({
-                                                    filename: p,
-                                                    filetype: type
-                                                })
-                                            }
-                                        ).then((s) => s.text()).then((t) => {
-                                            console.log('Preparing to rendezvous with Bezos')
-                                            const xhr = new XMLHttpRequest()
-                                            xhr.open('PUT', t)
-                                            xhr.onreadystatechange = function () {
-                                                if (xhr.readyState === 4) {
-                                                    if (xhr.status === 200)
-                                                        console.log('Image successfully uploaded to S3')
-                                                    else {
-                                                        console.debug('S3 gave us a ' + xhr.status)
-                                                        Alert.alert(
-                                                            "It's not you, it's us! 😞",
-                                                            "We couldn't save your pictures, please try again later."
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                            xhr.setRequestHeader('Content-Type', type)
-                                            console.info("Launching all missiles. May his Bald Head bless us all.")
-                                            console.log(p)
-                                            xhr.send({
-                                                uri: p,
-                                                type: type,
-                                                name: this.props.user.code + '-' + p.split('/').reduceRight(_ => _)
+                                // say what you will, but this is so much easier than scoping through async
+                                if (this.state.pics.length > 0) this.uploadPic(0, (p) => {
+                                    this.state.pics = p
+                                    if (this.state.pics.length > 1) this.uploadPic(1, (p) => {
+                                        this.state.pics = p
+                                        if (this.state.pics.length > 2) this.uploadPic(2, (p) => {
+                                            this.state.pics = p
+                                            if (this.state.pics.length > 3) this.uploadPic(3, (p) => {
+                                                this.state.pics = p
+                                                this.fin(p)
                                             })
-                                        }).catch((e) => {
-                                            if (e) {
-                                                console.debug(e)
-                                                Alert.alert(
-                                                    "It's not you, it's us! 😞",
-                                                    "We couldn't connect to our servers, please try again later."
-                                                )
-                                            }
+                                            else this.fin(p)
                                         })
-                                    }
+                                        else this.fin(p)
+                                    })
+                                    else this.fin(p)
+                                })
+
                                 this.props.user.pics = this.state.pics
-                                this.props.swiping()
                             }
                             else Alert.alert(
                                 "It's not you, it's us! 😞",
